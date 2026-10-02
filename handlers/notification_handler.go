@@ -69,3 +69,38 @@ func GetNotificationsByEmail(c *gin.Context) {
 
 	c.JSON(http.StatusOK, notifications)
 }
+// MarkAsRead - PATCH /notifications/:id/read
+func MarkAsRead(c *gin.Context) {
+	id := c.Param("id")
+
+	query := `UPDATE notifications SET is_read = TRUE WHERE id = $1 RETURNING id, recipient_email, type, message, is_read, created_at`
+
+	var notification models.Notification
+	err := config.DB.QueryRow(query, id).Scan(
+		&notification.ID, &notification.RecipientEmail, &notification.Type,
+		&notification.Message, &notification.IsRead, &notification.CreatedAt,
+	)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "notification পাওয়া যায়নি"})
+		return
+	}
+
+	c.JSON(http.StatusOK, notification)
+}
+
+// GetUnreadCount - GET /notifications/unread-count/:email
+func GetUnreadCount(c *gin.Context) {
+	email := c.Param("email")
+
+	var count int
+	query := `SELECT COUNT(*) FROM notifications WHERE recipient_email = $1 AND is_read = FALSE`
+
+	err := config.DB.QueryRow(query, email).Scan(&count)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "count বের করতে ব্যর্থ"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"unreadCount": count})
+}
