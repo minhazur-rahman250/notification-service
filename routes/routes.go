@@ -21,4 +21,9 @@ func SetupRoutes(router *gin.Engine) {
 		certificates.GET("/:id/download", handlers.DownloadCertificate)
 		certificates.GET("/student/:email", handlers.GetCertificatesByEmail)
 	}
+	analytics := router.Group("/analytics")
+	{
+		analytics.GET("/platform", handlers.GetPlatformStats)
+		analytics.GET("/certificates-by-course", handlers.GetCertificatesByCourse)
+	}
 }
