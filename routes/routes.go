@@ -19,6 +19,7 @@ func SetupRoutes(router *gin.Engine) {
 		certificates.GET("/:id/download", handlers.DownloadCertificate)
 		certificates.GET("/student/:email", handlers.GetCertificatesByEmail)
 	}
+	
 
 	
 }
