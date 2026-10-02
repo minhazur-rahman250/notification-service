@@ -11,12 +11,7 @@ func SetupRoutes(router *gin.Engine) {
 	{
 		api.POST("", handlers.CreateNotification)
 		api.GET("/:email", handlers.GetNotificationsByEmail)
-		
-	}
-	certificates := router.Group("/certificates")
-	{
-		certificates.POST("", handlers.GenerateCertificate)
-		certificates.GET("/:id/download", handlers.DownloadCertificate)
-		certificates.GET("/student/:email", handlers.GetCertificatesByEmail)
+		api.PATCH("/:id/read", handlers.MarkAsRead)             // নতুন
+		api.GET("/unread-count/:email", handlers.GetUnreadCount) // নতুন
 	}
 }
