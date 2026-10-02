@@ -69,4 +69,21 @@ func ConnectDatabase() {
 	}
 
 	log.Println("certificates টেবিল প্রস্তুত")
+
+	createCourseIndexTableQuery := `
+	CREATE TABLE IF NOT EXISTS course_search_index (
+		id SERIAL PRIMARY KEY,
+		course_id INTEGER UNIQUE NOT NULL,
+		title VARCHAR(255) NOT NULL,
+		description TEXT,
+		price DECIMAL(10,2) DEFAULT 0,
+		teacher_name VARCHAR(255),
+		indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	if _, err := db.Exec(createCourseIndexTableQuery); err != nil {
+		log.Fatal("course_search_index টেবিল তৈরি করতে ব্যর্থ:", err)
+	}
+
+	log.Println("course_search_index টেবিল প্রস্তুত")
 }

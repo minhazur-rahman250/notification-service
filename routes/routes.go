@@ -26,4 +26,11 @@ func SetupRoutes(router *gin.Engine) {
 		analytics.GET("/platform", handlers.GetPlatformStats)
 		analytics.GET("/certificates-by-course", handlers.GetCertificatesByCourse)
 	}
+
+	search := router.Group("/search")
+	{
+		search.POST("/index", handlers.IndexCourse)
+		search.GET("/courses", handlers.SearchCourses)
+		search.DELETE("/index/:courseId", handlers.RemoveCourseFromIndex)
+	}
 }
