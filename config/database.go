@@ -52,4 +52,21 @@ func ConnectDatabase() {
 
 	DB = db
 	log.Println("PostgreSQL এর সাথে কানেকশন সফল, notifications টেবিল প্রস্তুত")
+
+	createCertificateTableQuery := `
+	CREATE TABLE IF NOT EXISTS certificates (
+		id SERIAL PRIMARY KEY,
+		certificate_number VARCHAR(100) UNIQUE NOT NULL,
+		student_email VARCHAR(255) NOT NULL,
+		student_name VARCHAR(255) NOT NULL,
+		course_title VARCHAR(255) NOT NULL,
+		file_path VARCHAR(500) NOT NULL,
+		issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	if _, err := db.Exec(createCertificateTableQuery); err != nil {
+		log.Fatal("certificates টেবিল তৈরি করতে ব্যর্থ:", err)
+	}
+
+	log.Println("certificates টেবিল প্রস্তুত")
 }
