@@ -7,11 +7,18 @@ import (
 )
 
 func SetupRoutes(router *gin.Engine) {
-	api := router.Group("/notifications")
+	notifications := router.Group("/notifications")
 	{
-		api.POST("", handlers.CreateNotification)
-		api.GET("/:email", handlers.GetNotificationsByEmail)
-		api.PATCH("/:id/read", handlers.MarkAsRead)             // নতুন
-		api.GET("/unread-count/:email", handlers.GetUnreadCount) // নতুন
+		notifications.POST("", handlers.CreateNotification)
+		notifications.GET("/:email", handlers.GetNotificationsByEmail)
+		notifications.PATCH("/:id/read", handlers.MarkAsRead)
+		notifications.GET("/unread-count/:email", handlers.GetUnreadCount)
+	}
+
+	certificates := router.Group("/certificates")
+	{
+		certificates.POST("", handlers.GenerateCertificate)
+		certificates.GET("/:id/download", handlers.DownloadCertificate)
+		certificates.GET("/student/:email", handlers.GetCertificatesByEmail)
 	}
 }
