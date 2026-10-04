@@ -70,7 +70,7 @@ func ConnectDatabase() {
 
 	log.Println("certificates টেবিল প্রস্তুত")
 
-	createCourseIndexTableQuery := `
+		createCourseIndexTableQuery := `
 	CREATE TABLE IF NOT EXISTS course_search_index (
 		id SERIAL PRIMARY KEY,
 		course_id INTEGER UNIQUE NOT NULL,
@@ -78,6 +78,9 @@ func ConnectDatabase() {
 		description TEXT,
 		price DECIMAL(10,2) DEFAULT 0,
 		teacher_name VARCHAR(255),
+		lesson_count INTEGER DEFAULT 0,
+		enrollment_count INTEGER DEFAULT 0,
+		is_published BOOLEAN DEFAULT FALSE,
 		indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 

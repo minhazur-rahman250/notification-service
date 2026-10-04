@@ -10,7 +10,8 @@ import (
 )
 
 // IndexCourse - POST /search/index
-// NestJS থেকে course তৈরি/publish/update হলে এটা কল হবে, search index আপডেট রাখার জন্য
+// NestJS থেকে course create/update হলে এটা কল হয়, Course+User+Lesson+Enrollment
+// এর সারসংক্ষেপ এখানে সংরক্ষিত থাকে যাতে সার্চ দ্রুত হয়, মূল টেবিলে বারবার জয়েন লাগে না
 func IndexCourse(c *gin.Context) {
 	var req models.IndexCourseRequest
 
@@ -19,20 +20,25 @@ func IndexCourse(c *gin.Context) {
 		return
 	}
 
-	// ON CONFLICT - একই course_id আগে থেকে থাকলে নতুন করে insert না করে update করে দেয়
 	query := `
-		INSERT INTO course_search_index (course_id, title, description, price, teacher_name)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO course_search_index
+			(course_id, title, description, price, teacher_name, lesson_count, enrollment_count, is_published)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (course_id)
-		DO UPDATE SET title = $2, description = $3, price = $4, teacher_name = $5, indexed_at = CURRENT_TIMESTAMP
-		RETURNING id, course_id, title, description, price, teacher_name, indexed_at`
+		DO UPDATE SET
+			title = $2, description = $3, price = $4, teacher_name = $5,
+			lesson_count = $6, enrollment_count = $7, is_published = $8,
+			indexed_at = CURRENT_TIMESTAMP
+		RETURNING id, course_id, title, description, price, teacher_name, lesson_count, enrollment_count, is_published, indexed_at`
 
 	var course models.CourseIndex
 	err := config.DB.QueryRow(
 		query, req.CourseID, req.Title, req.Description, req.Price, req.TeacherName,
+		req.LessonCount, req.EnrollmentCount, req.IsPublished,
 	).Scan(
-		&course.ID, &course.CourseID, &course.Title, &course.Description,
-		&course.Price, &course.TeacherName, &course.IndexedAt,
+		&course.ID, &course.CourseID, &course.Title, &course.Description, &course.Price,
+		&course.TeacherName, &course.LessonCount, &course.EnrollmentCount,
+		&course.IsPublished, &course.IndexedAt,
 	)
 
 	if err != nil {
@@ -43,7 +49,9 @@ func IndexCourse(c *gin.Context) {
 	c.JSON(http.StatusOK, course)
 }
 
-// SearchCourses - GET /search/courses?q=nestjs&minPrice=0&maxPrice=100&sort=price_asc
+// SearchCourses - GET /search/courses?q=&minPrice=&maxPrice=&sort=
+// sort: newest (default) | price_asc | price_desc | title_asc | popular
+// শুধু is_published = true কোর্স পাবলিক সার্চে দেখায়
 func SearchCourses(c *gin.Context) {
 	searchQuery := c.Query("q")
 	minPriceStr := c.DefaultQuery("minPrice", "0")
@@ -67,14 +75,16 @@ func SearchCourses(c *gin.Context) {
 		orderBy = "price DESC"
 	case "title_asc":
 		orderBy = "title ASC"
+	case "popular":
+		orderBy = "enrollment_count DESC"
 	}
 
-	// ILIKE - PostgreSQL এ case-insensitive pattern matching (বড়/ছোট হাতের অক্ষর নিয়ে ভাবতে হয় না)
 	query := `
-		SELECT id, course_id, title, description, price, teacher_name, indexed_at
+		SELECT id, course_id, title, description, price, teacher_name, lesson_count, enrollment_count, is_published, indexed_at
 		FROM course_search_index
 		WHERE (title ILIKE $1 OR description ILIKE $1)
 		AND price BETWEEN $2 AND $3
+		AND is_published = TRUE
 		ORDER BY ` + orderBy
 
 	rows, err := config.DB.Query(query, "%"+searchQuery+"%", minPrice, maxPrice)
@@ -88,8 +98,9 @@ func SearchCourses(c *gin.Context) {
 	for rows.Next() {
 		var course models.CourseIndex
 		if err := rows.Scan(
-			&course.ID, &course.CourseID, &course.Title, &course.Description,
-			&course.Price, &course.TeacherName, &course.IndexedAt,
+			&course.ID, &course.CourseID, &course.Title, &course.Description, &course.Price,
+			&course.TeacherName, &course.LessonCount, &course.EnrollmentCount,
+			&course.IsPublished, &course.IndexedAt,
 		); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "ডেটা পড়তে ব্যর্থ"})
 			return
@@ -97,14 +108,10 @@ func SearchCourses(c *gin.Context) {
 		results = append(results, course)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"results": results,
-		"count":   len(results),
-	})
+	c.JSON(http.StatusOK, gin.H{"results": results, "count": len(results)})
 }
 
 // RemoveCourseFromIndex - DELETE /search/index/:courseId
-// NestJS এ course ডিলিট হলে index থেকেও সরাতে হবে
 func RemoveCourseFromIndex(c *gin.Context) {
 	courseId := c.Param("courseId")
 
